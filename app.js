@@ -1,111 +1,152 @@
 const express = require("express");
-const bodyParser = require("body-parser");
 const app = express();
+const { Biodata } = require("./models/biodata"); // Import model Biodata
+const sequelize = require("./config/database"); // Import and initialize Sequelize
 
-app.use(bodyParser.json());
+app.use(express.json());
 
-//data biodata
-let biodata = [];
+// Endpoint Create Biodata
+app.post("/biodata", async (req, res) => {
+  try {
+    const { nama, tempatLahir, tanggalLahir, alamat } = req.body;
 
-//endpoint Creat Biodata
-app.post("/biodata", (req, res) => {
-  const { nama, tempatLahir, tanggalLahir, alamat } = req.body;
+    // Membuat biodata baru
+    const biodata = await Biodata.create({
+      nama,
+      tempatLahir,
+      tanggalLahir,
+      alamat,
+    });
 
-  //membuat objek data baru
-
-  const newBiodata = {
-    id: biodata.length + 1,
-    nama,
-    tempatLahir,
-    tanggalLahir,
-    alamat,
-  };
-
-  //menambahkan data baru kedalam array biodata
-  biodata.push(newBiodata);
-
-  res.status(200).json({
-    message: "Biodata berhasil ditambahka",
-    data: newBiodata,
-  });
+    res.status(201).json({
+      message: "Biodata berhasil ditambahkan",
+      data: biodata,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Terjadi kesalahan dalam menambahkan biodata",
+      error: error.message,
+    });
+  }
 });
 
-//Endpoint Read Biodata
-app.get("/biodata", (req, res) => {
-  res.status(200).json({
-    message: "Data Biodata",
-    data: biodata,
-  });
-});
+// Endpoint Read All Biodata
+app.get("/biodata", async (req, res) => {
+  try {
+    // Mengambil semua data biodata
+    const biodata = await Biodata.findAll();
 
-app.get("/biodata/:id", (req, res) => {
-  const id = parseInt(req.params.id);
-
-  // Mencari biodata berdasarkan id
-  const biodataById = biodata.find((b) => b.id === id);
-
-  // Mengembalikan data biodata jika ditemukan
-  if (biodataById) {
     res.status(200).json({
       message: "Data Biodata",
-      data: biodataById,
+      data: biodata,
     });
-  } else {
-    res.status(404).json({
-      message: "Biodata tidak ditemukan",
-    });
-  }
-});
-
-//Endpont Update biodata
-app.put("/biodata/:id", (req, res) => {
-  const id = parseInt(req.params.id);
-  const { nama, tempatLahir, tanggalLahir, alamat } = req.body;
-
-  //mencari berdasarikan id
-  const updateBiodata = biodata.find((b) => b.id === id);
-
-  //jika id ditemukan
-  if (updateBiodata) {
-    updateBiodata.nama = nama;
-    updateBiodata.tempatLahir = tempatLahir;
-    updateBiodata.tanggalLahir = tanggalLahir;
-    updateBiodata.alamat = alamat;
-
-    res.status(200).json({
-      message: "Biodata Berhasil di Update",
-      data: updateBiodata,
-    });
-  } else {
-    res.status(404).json({
-      message: "Biodata tidak ditemukan",
+  } catch (error) {
+    res.status(500).json({
+      message: "Terjadi kesalahan dalam mendapatkan biodata",
+      error: error.message,
     });
   }
 });
 
-//Endpoint delete Biodata
-app.delete("/biodata/:id", (req, res) => {
-  const id = parseInt(req.params.id);
+// Endpoint Read Biodata by ID
+app.get("/biodata/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
 
-  //menghapus biodata bedasarkan id
-  const deleteBiodataIndex = biodata.findIndex((b) => b.id === id);
+    // Mencari biodata berdasarkan ID
+    const biodata = await Biodata.findByPk(id);
 
-  //menghpus data jika ditemukan
-
-  if (deleteBiodataIndex !== -1) {
-    const deleteBiodata = biodata.splice(deleteBiodataIndex, 1);
-
-    res.status(200).json({
-      message: "Biodata berhasil dihapus",
-      data: deleteBiodata,
-    });
-  } else {
-    res.status(404).json({
-      message: "Biodata tidak ditemukan",
+    if (!biodata) {
+      res.status(404).json({
+        message: "Biodata tidak ditemukan",
+      });
+    } else {
+      res.status(200).json({
+        message: "Data Biodata",
+        data: biodata,
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      message: "Terjadi kesalahan dalam mendapatkan biodata",
+      error: error.message,
     });
   }
 });
 
+// Endpoint Update Biodata
+app.put("/biodata/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { nama, tempatLahir, tanggalLahir, alamat } = req.body;
+
+    // Mencari biodata berdasarkan ID
+    const biodata = await Biodata.findByPk(id);
+
+    if (!biodata) {
+      res.status(404).json({
+        message: "Biodata tidak ditemukan",
+      });
+    } else {
+      // Update data biodata
+      biodata.nama = nama;
+      biodata.tempatLahir = tempatLahir;
+      biodata.tanggalLahir = tanggalLahir;
+      biodata.alamat = alamat;
+      await biodata.save();
+
+      res.status(200).json({
+        message: "Biodata berhasil diupdate",
+        data: biodata,
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      message: "Terjadi kesalahan dalam mengupdate biodata",
+      error: error.message,
+    });
+  }
+});
+
+// Endpoint Delete Biodata
+app.delete("/biodata/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+
+    //Mencari biodata berdasarkan ID
+    const biodata = await Biodata.findByPk(id);
+
+    if (!biodata) {
+      res.status(404).json({
+        message: "Biodata tidak ditemukan",
+      });
+    } else {
+      // Menghapus biodata
+      await biodata.destroy();
+
+      res.status(200).json({
+        message: "Biodata berhasil dihapus",
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      message: "Terjadi kesalahan dalam menghapus biodata",
+      error: error.message,
+    });
+  }
+});
+// Menghubungkan Sequelize ke database
+sequelize
+  .authenticate()
+  .then(() => {
+    console.log('Berhasil terhubung ke database');
+  })
+  .catch((error) => {
+    console.error('Gagal terhubung ke database:', error);
+  });
+
+
+// Menjalankan server pada port 3000
 app.listen(3000, () => {
-  console.log("server berjalan di port 3000...");
+  console.log("Server berjalan pada port 3000");
 });
